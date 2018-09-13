@@ -1,0 +1,88 @@
+### This is just the fisrt step, we create the code to see if it works with one of the states of Mexico,
+Aguascalientes.
+## Here we made a new classification in the houses wich have more than one old person
+# Then CONACT1:
+# 1<- works
+# 2<- does not work
+# 3<- has pension 
+# 4<- mixed: two or three of the other categories
+
+# Data base from:
+#http://www.beta.inegi.org.mx/proyectos/enchogares/especiales/intercensal/
+
+per<- read.csv("/Users/gemaitzeltorresmejia/Downloads/eic2015_01_csv/TR_PERSONA01.CSV")
+viv<- read.csv("/Users/gemaitzeltorresmejia/Downloads/eic2015_01_csv/TR_VIVIENDA01.CSV")
+
+########### PARTE 1 ###########
+
+
+mat_per_viv<- merge(per,viv)### matriz con todas las edades 
+
+
+########## PARTE 2 #########
+# solo viviendas con adultos mayores a 60 
+
+mayor<-subset(mat_per_viv, ((mat_per_viv$EDAD>=60 & mat_per_viv$EDAD<=110) & mat_per_viv$CONACT!=99))
+
+prueb2<- mat_per_viv$ID_VIV %in% mayor$ID_VIV 
+table(prueb2)           
+
+
+##### hogares con adultos mayores de 60 a??os con sus respectivas familias
+hog_mat<- cbind(mat_per_viv, prueb2)
+hog60<- subset(hog_mat, hog_mat$prueb2== TRUE )
+
+require(questionr)
+esxpan<- wtd.table(hog60$TECHOS, weights = hog60$FACTOR)
+sum(esxpan)
+
+########## PARTE 3 ############
+hog60$cont_eda<- rep(0, 38018)
+
+# cuantos adultos mayores hay por hogar
+# etiquetar con 1 a laspersonas mayores de 60 
+hog60$cont_eda[hog60$EDAD>=60 & hog60$EDAD<=110]<- 1
+
+
+conta<- aggregate(hog60$cont_eda, by=list(Category=hog60$ID_VIV), FUN=sum)
+
+
+# generar una nueva base con las nuevas categorias de dos o mas 
+# mayores de edd en un mismo hogar 
+hog60_1<- hog60
+
+#hog60_1<-(Categoria = conta$Category) 
+hog60_1<- merge(hog60, conta, by.x = "ID_VIV", by.y = "Category")
+
+# recodificar con 
+# 1 <- trabaja
+# 2<- no trabaja
+# 3 <- jubilado
+# 4 <- mixto
+# x es la variable que dice cuantos mayores de edad hay por hogar
+# y <- categorias
+# CONACT1 variable bien etiquetada
+
+
+hog60_1$y<- rep(NA, 38018)
+
+hog60_1$y[(hog60_1$CONACT==10 | hog60_1$CONACT==11  | hog60_1$CONACT==12 | hog60_1$CONACT==13 | hog60_1$CONACT==14  | hog60_1$CONACT==15 | hog60_1$CONACT==16) &  (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<-1
+hog60_1$y[(hog60_1$CONACT==20 | hog60_1$CONACT==31 | hog60_1$CONACT==33  | hog60_1$CONACT==34  | hog60_1$CONACT==35)  & (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<- 2
+hog60_1$y[hog60_1$CONACT==32   & (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<-3
+
+### aqui hay 38018 personas y hay 31 personas con 99  
+
+
+library(magrittr)
+require(dplyr)
+
+
+# busca por vivienda cuantos códigos difieren
+a2<-hog60_1 %>% group_by(ID_VIV) %>% filter(!is.na(y)) %>% summarize (n_distinct(y))
+hog_2<- merge(hog60_1, a2)
+
+# para la categoria 4
+
+hog_2$CONACT1<- hog_2$y
+hog_2$CONACT1[(hog_2$EDAD>=60 & hog_2$EDAD<=110) & hog_2$`n_distinct(y)`>=2]<- 4
+i<- data.frame(as.character(hog_2$ID_VIV) ,hog_2$EDAD, hog_2$NUMPER, hog_2$y, hog_2$`n_distinct(y)`, hog_2$CONACT1)
