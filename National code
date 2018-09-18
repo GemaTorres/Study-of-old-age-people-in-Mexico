@@ -1,0 +1,65 @@
+mat_per_viv<- load("/Users/gemaitzeltorresmejia/Downloads/eic2015_nacional.RData")
+
+########### PARTE 1 ###########
+# solo viviendas con adultos mayores a 60 
+
+mayor<-subset(eicpersonas, ((eicpersonas$EDAD>=60 & eicpersonas$EDAD<=110) & eicpersonas$CONACT!=99))
+
+TR_FA<- eicvivienda$ID_VIV %in% mayor$ID_VIV 
+table(prueb2)           
+##### hogares con adultos mayores de 60 a??os con sus respectivas familias
+mat_per_viv<- cbind(eicvivienda, TR_FA)
+hog60<- subset(mat_per_viv, mat_per_viv$TR_FA== TRUE )
+
+########## PARTE 2 #########
+hog60_1<- merge(eicpersonas,hog60)### matriz con todas las edades 
+
+require(questionr)
+esxpan<- wtd.table(hog60$TECHOS, weights = hog60$FACTOR)
+sum(esxpan)
+
+########## PARTE 3 ############
+hog60$cont_eda<- rep(0, 38018)
+
+# cuantos adultos mayores hay por hogar
+# etiquetar con 1 a laspersonas mayores de 60 
+hog60$cont_eda[hog60$EDAD>=60 & hog60$EDAD<=110]<- 1
+
+
+# recodificar con 
+# 1 <- trabaja
+# 2<- no trabaja
+# 3 <- jubilado
+# 4 <- mixto
+# x es la variable que dice cuantos mayores de edad hay por hogar
+# y <- categorias
+# CONACT1 variable bien etiquetada
+
+
+hog60_1$y<- rep(NA, length(hog60_1$ID_VIV))
+
+hog60_1$y[(hog60_1$CONACT==10 | hog60_1$CONACT==11  | hog60_1$CONACT==12 | hog60_1$CONACT==13 | hog60_1$CONACT==14  | hog60_1$CONACT==15 | hog60_1$CONACT==16) &  (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<-1
+hog60_1$y[(hog60_1$CONACT==20 | hog60_1$CONACT==31 | hog60_1$CONACT==33  | hog60_1$CONACT==34  | hog60_1$CONACT==35)  & (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<- 2
+hog60_1$y[hog60_1$CONACT==32   & (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<-3
+
+
+
+library(magrittr)
+require(dplyr)
+
+
+# busca por vivienda cuantos c??digos difieren
+a2<-hog60_1 %>% group_by(ID_VIV) %>% filter(!is.na(y)) %>% summarize (n_distinct(y))
+hog60_1<- merge(hog60_1, a2)
+
+# para la categoria 4
+
+hog60_1$CONACT1<- hog60_1$y
+hog60_1$CONACT1[(hog60_1$EDAD>=60 & hog60_1$EDAD<=110) & hog60_1$`n_distinct(y)`>=2]<- 4
+
+tabla<- data.frame(hog60_1$ID_VIV, hog60_1$FACTOR, hog60_1$ID_PERSONA, hog60_1$CONACT1, hog60_1$CLAVIVP,
+                   hog60_1$TECHOS, hog60_1$AGUA_ENTUBADA, hog60_1$REFRIGERADOR, hog60_1$LAVADORA,
+                   hog60_1$AUTOPROP, hog60_1$TENENCIA, hog60_1$JEFE_EDAD, hog60_1$JEFE_SEXO,
+                   hog60_1$TIPOHOG, hog60_1$NUMPER, hog60_1$EDAD)
+
+
