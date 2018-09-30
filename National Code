@@ -1,0 +1,138 @@
+# Ater this work the next step is to read the results
+###### PARTIR BASE ######
+mat_per_viv<- load("/Users/gemaitzeltorresmejia/Downloads/eic2015_nacional.RData")
+
+##### ENTIDAD DE 1-14 #########
+
+## eicpersonas Nacional: 22692265
+## 8411466
+eicpersonas<- subset(eicpersonas, (eicpersonas$ENT>=1 & eicpersonas$ENT<=14))
+
+## eicvivienda Nacional: 5854392
+## 2138753
+eicvivienda<- subset(eicvivienda, (eicvivienda$ENT>=1 & eicvivienda$ENT<=14))
+
+########### parte 1 ###########
+# solo viviendas con adultos mayores a 60 
+
+mayor<-subset(eicpersonas, ((eicpersonas$EDAD>=60 & eicpersonas$EDAD<=110) & eicpersonas$CONACT!=99))
+
+# Busca el ID que coincide de las personas mayores con el hogar ID 
+TR_FA<- eicvivienda$ID_VIV %in% mayor$ID_VIV 
+##### hogares con adultos mayores de 60 a??os con sus respectivas familias
+mat_per_viv<- cbind(eicvivienda, TR_FA)
+hog60<- subset(mat_per_viv, mat_per_viv$TR_FA== TRUE )
+
+########## parte 2 #########
+hog60_1<- merge(eicpersonas,hog60)### matriz con todas las personas por hogar mayor a 60
+
+########## parte 3 ############
+
+# recodificar con 
+# 1 <- trabaja
+# 2<- no trabaja
+# 3 <- jubilado
+# 4 <- mixto
+# y <- categorias sin Mixto
+# CONACT1 variable bien etiquetada con MIXTO
+# hog60_1<- base con todas las personas de cada hogar que contienen por lo menos un adulto mayor a 60
+# per60 <- base con personas mayoes a 60 con CONACT1 y variables por hogar
+# DUP<- TRUE FALSE, valores duplicados de ID
+
+hog60_1$y<- rep(NA, length(hog60_1$ID_VIV))
+
+hog60_1$y[(hog60_1$CONACT==10 | hog60_1$CONACT==11  | hog60_1$CONACT==12 | hog60_1$CONACT==13 | hog60_1$CONACT==14  | hog60_1$CONACT==15 | hog60_1$CONACT==16) &  (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<-1
+hog60_1$y[(hog60_1$CONACT==20 | hog60_1$CONACT==31 | hog60_1$CONACT==33  | hog60_1$CONACT==34  | hog60_1$CONACT==35)  & (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<- 2
+hog60_1$y[hog60_1$CONACT==32   & (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<-3
+
+library(magrittr)
+require(dplyr)
+
+# busca por vivienda cuantos c??digos difieren
+a2<-hog60_1 %>% group_by(ID_VIV) %>% filter(!is.na(y)) %>% summarize (n_distinct(y))
+hog60_1<- merge(hog60_1, a2)
+
+# para la categoria 4
+
+hog60_1$CONACT1<- hog60_1$y
+hog60_1$CONACT1[(hog60_1$EDAD>=60 & hog60_1$EDAD<=110) & hog60_1$`n_distinct(y)`>=2]<- 4
+
+### Base para solo las personas mayores de 60 con datos del hogar
+per60<- hog60_1 %>% group_by(ID_VIV) %>% filter(CONACT1==1 |CONACT1==2 |CONACT1==3 |CONACT1==4) 
+per60$DUP<- duplicated(per60$ID_VIV)
+#DUP== TRUE, se duplicala el ID
+per60<- subset(per60, per60$DUP==FALSE)
+
+require(questionr)
+c1<- wtd.table(per60$CONACT1, weights = per60$FACTOR)
+c2<- wtd.table(per60$CONACT1, per60$CLAVIVP, weights = per60$FACTOR)
+c3<- wtd.table(per60$CONACT1, per60$TECHOS, weights = per60$FACTOR)
+c4<- wtd.table(per60$CONACT1, per60$AGUA_ENTUBADA, weights = per60$FACTOR)
+c5<- wtd.table(per60$CONACT1, per60$REFRIGERADOR, weights = per60$FACTOR)
+c6<- wtd.table(per60$CONACT1, per60$LAVADORA, weights = per60$FACTOR)
+c7<- wtd.table(per60$CONACT1, per60$AUTOPROP, weights = per60$FACTOR)
+c8<- wtd.table(per60$CONACT1, per60$JEFE_EDAD, weights = per60$FACTOR)
+c9<- wtd.table(per60$CONACT1, per60$JEFE_SEXO, weights = per60$FACTOR)
+c10<- wtd.table(per60$CONACT1, per60$TIPOHOG, weights = per60$FACTOR)
+
+#### ENTIDAD 15- 32######
+
+## eicpersonas Nacional: 22692265
+## 14280799
+eicpersonas<- subset(eicpersonas, (eicpersonas$ENT>=15 & eicpersonas$ENT<=32))
+
+## eicvivienda Nacional: 5854392
+## 3715639
+eicvivienda<- subset(eicvivienda, (eicvivienda$ENT>=15 & eicvivienda$ENT<=32))
+
+########### parte 1 ###########
+# solo viviendas con adultos mayores a 60 
+
+mayor<-subset(eicpersonas, ((eicpersonas$EDAD>=60 & eicpersonas$EDAD<=110) & eicpersonas$CONACT!=99))
+
+# Busca el ID que coincide de las personas mayores con el hogar ID 
+TR_FA<- eicvivienda$ID_VIV %in% mayor$ID_VIV 
+##### hogares con adultos mayores de 60 a??os con sus respectivas familias
+mat_per_viv<- cbind(eicvivienda, TR_FA)
+hog602<- subset(mat_per_viv, mat_per_viv$TR_FA== TRUE )
+
+########## parte 2 #########
+hog60_1<- merge(eicpersonas,hog602)### matriz con todas las personas por hogar mayor a 60
+
+########## parte 3 ############
+
+hog60_1$y<- rep(NA, length(hog60_1$ID_VIV))
+
+hog60_1$y[(hog60_1$CONACT==10 | hog60_1$CONACT==11  | hog60_1$CONACT==12 | hog60_1$CONACT==13 | hog60_1$CONACT==14  | hog60_1$CONACT==15 | hog60_1$CONACT==16) &  (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<-1
+hog60_1$y[(hog60_1$CONACT==20 | hog60_1$CONACT==31 | hog60_1$CONACT==33  | hog60_1$CONACT==34  | hog60_1$CONACT==35)  & (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<- 2
+hog60_1$y[hog60_1$CONACT==32   & (hog60_1$EDAD>=60 & hog60_1$EDAD<=110)]<-3
+
+# busca por vivienda cuantos c??digos difieren
+a2<-hog60_1 %>% group_by(ID_VIV) %>% filter(!is.na(y)) %>% summarize (n_distinct(y))
+hog60_1<- merge(hog60_1, a2)
+
+# para la categoria 4
+
+hog60_1$CONACT1<- hog60_1$y
+hog60_1$CONACT1[(hog60_1$EDAD>=60 & hog60_1$EDAD<=110) & hog60_1$`n_distinct(y)`>=2]<- 4
+
+### Base para solo las personas mayores de 60 con datos del hogar
+per602<- hog60_1 %>% group_by(ID_VIV) %>% filter(CONACT1==1 |CONACT1==2 |CONACT1==3 |CONACT1==4) 
+per602$DUP<- duplicated(per602$ID_VIV)
+#DUP== TRUE, se duplicala el ID
+per602<- subset(per602, per602$DUP==FALSE)
+
+
+require(questionr)
+c12<- wtd.table(per602$CONACT1, weights = per602$FACTOR)
+c22<- wtd.table(per602$CONACT1, per602$CLAVIVP, weights = per602$FACTOR)
+c32<- wtd.table(per602$CONACT1, per602$TECHOS, weights = per602$FACTOR)
+c42<- wtd.table(per602$CONACT1, per602$AGUA_ENTUBADA, weights = per602$FACTOR)
+c52<- wtd.table(per602$CONACT1, per602$REFRIGERADOR, weights = per602$FACTOR)
+c62<- wtd.table(per602$CONACT1, per602$LAVADORA, weights = per602$FACTOR)
+c72<- wtd.table(per602$CONACT1, per602$AUTOPROP, weights = per602$FACTOR)
+c82<- wtd.table(per602$CONACT1, per602$JEFE_EDAD, weights = per602$FACTOR)
+c92<- wtd.table(per602$CONACT1, per602$JEFE_SEXO, weights = per602$FACTOR)
+c102<- wtd.table(per602$CONACT1, per602$TIPOHOG, weights = per602$FACTOR)
+
+write.csv(c10+c102, "/Users/gemaitzeltorresmejia/Downloads/eic2015_01_csv/TIPOHOG.CSV")
